@@ -1,61 +1,57 @@
-import javax.swing.*;
-
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
-import javax.swing.tree.*;
-
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-
 //import javax.swing.event.*;
-import java.awt.*;
-import java.awt.datatransfer.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 //import java.awt.event.*;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Paths;
+import java.util.List;
 
-import com.amazonaws.regions.Regions;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
+import javax.swing.DropMode;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
+import javax.swing.UIManager;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.Bucket;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-
-import java.util.List;
-
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-
-import java.io.File;
-import java.nio.file.Paths;
 
 public class DragDropFiles extends JFrame {
 
-    private DefaultListModel model = new DefaultListModel();
-    private static DefaultTreeModel s3list = null;
-    private int count = 0;
     private JTree tree;
     private JLabel label;
     private JButton download;
@@ -63,7 +59,6 @@ public class DragDropFiles extends JFrame {
     private TreePath namesPath;
     private JPanel wrap;
     private TreePath downloadPath = null;
-    private static List<BucketWrapper> bucketWrappers = null; 
     final static AmazonS3 s3 = AmazonS3ClientBuilder.standard().withRegion(Regions.DEFAULT_REGION).build();
     
     public static DefaultTreeModel buildS3TreeModel(AWSCredentials credentials) {
@@ -90,8 +85,6 @@ public class DragDropFiles extends JFrame {
             List<Bucket> buckets = s3.listBuckets();
             System.out.println("Your Amazon S3 buckets are:");
             for (Bucket b : buckets) {
-                
-//            	System.out.println("* " + b.getName());
                 BucketWrapper bw = new BucketWrapper(b);
                 bw.setObjectList(getBucketObjects(b.getName()));
             }
@@ -102,49 +95,16 @@ public class DragDropFiles extends JFrame {
     	
         ListObjectsV2Result result = s3.listObjectsV2(bucket_name);
         List<S3ObjectSummary> objects = result.getObjectSummaries();
-//        System.out.println("\n");
         for (S3ObjectSummary os : objects) {
         	System.out.println("\nbucket name: " + os.getBucketName() + "\ncontains: "+os.getKey());
         }
         return objects;
     }
 
-    private static DefaultTreeModel getDefaultTreeModel() {
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode("All My Buckets");
-        DefaultMutableTreeNode parent;
-        DefaultMutableTreeNode nparent;
-
-        parent = new DefaultMutableTreeNode("colors");
-        root.add(parent);
-        parent.add(new DefaultMutableTreeNode("red"));
-        parent.add(new DefaultMutableTreeNode("yellow"));
-        parent.add(new DefaultMutableTreeNode("green"));
-        parent.add(new DefaultMutableTreeNode("blue"));
-        parent.add(new DefaultMutableTreeNode("purple"));
-
-        parent = new DefaultMutableTreeNode("names");
-        root.add(parent);
-        nparent = new DefaultMutableTreeNode("men");
-        nparent.add(new DefaultMutableTreeNode("jack"));
-        nparent.add(new DefaultMutableTreeNode("kieran"));
-        nparent.add(new DefaultMutableTreeNode("william"));
-        nparent.add(new DefaultMutableTreeNode("jose"));
-        
-        parent.add(nparent);
-        nparent = new DefaultMutableTreeNode("women");
-        nparent.add(new DefaultMutableTreeNode("jennifer"));
-        nparent.add(new DefaultMutableTreeNode("holly"));
-        nparent.add(new DefaultMutableTreeNode("danielle"));
-        nparent.add(new DefaultMutableTreeNode("tara"));
-        parent.add(nparent);
-
-        return new DefaultTreeModel(root);
-    }
-
     public DragDropFiles() {
         super("Drag and Drop File Transfers in Cloud");
 
-//        treeModel = getDefaultTreeModel();
+
         treeModel = buildS3TreeModel(getAWSCredentials());
         
         tree = new JTree(treeModel);
@@ -280,7 +240,7 @@ public class DragDropFiles extends JFrame {
         		//Refer to TreePath class about how to extract the bucket name and file name out of 
         		//the downloadPath object.
         	    if(downloadPath != null) {
-        	    		JOptionPane.showMessageDialog(null, "You like to downloand a file from cloud from buckets:" + 
+        	    		JOptionPane.showMessageDialog(null, "You would like to downloand a file from cloud from buckets:" + 
         	    				downloadPath.toString());
         	    }
         	  } 
@@ -339,8 +299,7 @@ public class DragDropFiles extends JFrame {
     public static void main(String[] args) {
     	
     	AWSCredentials credentials = getAWSCredentials();
-//    	s3.createBucket("test-from-main-schuy");
-        s3list = buildS3TreeModel(credentials);
+buildS3TreeModel(credentials);
         
         
         SwingUtilities.invokeLater(new Runnable() {
@@ -383,13 +342,10 @@ public class DragDropFiles extends JFrame {
           	
     	
         String key_name = Paths.get(file_path).getFileName().toString();
-//        System.out.println("pwd = "+Paths.get("").toAbsolutePath().toString());
 
         System.out.format("Uploading %s to S3 bucket %s...\n", file_path, bucket_name);
-        final AmazonS3 s3 = AmazonS3ClientBuilder.standard().withRegion(Regions.DEFAULT_REGION).build();
         try {
             s3.putObject(bucket_name, key_name, new File(file_path));
-//            System.out.println("upload successful"); need to check if it contains key first, or wait for this in another thread
         } catch (AmazonServiceException e) {
             System.err.println(e.getErrorMessage());
             System.exit(1);
