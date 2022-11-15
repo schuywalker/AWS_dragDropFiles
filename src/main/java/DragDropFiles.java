@@ -240,8 +240,36 @@ public class DragDropFiles extends JFrame {
         		//Refer to TreePath class about how to extract the bucket name and file name out of 
         		//the downloadPath object.
         	    if(downloadPath != null) {
-        	    		JOptionPane.showMessageDialog(null, "You would like to downloand a file from cloud from buckets:" + 
-        	    				downloadPath.toString());
+                    JOptionPane.showMessageDialog(null, "Downloading file: " + 
+                    downloadPath.getLastPathComponent().toString() + " from cloud from buckets: " + downloadPath.getParentPath().getLastPathComponent().toString());
+                    //Get bucket and key names
+                    String bucket_name = downloadPath.getParentPath().getLastPathComponent().toString();
+                    String key_name = downloadPath.getLastPathComponent().toString();
+                    //Try to download the file
+                    try {
+                        label.setText("Downloading...");
+                        S3Object o = s3.getObject(bucket_name, key_name);
+                        S3ObjectInputStream s3ObjectInputStream = o.getObjectContent();
+                        FileOutputStream fileOutputStream = new FileOutputStream(new File(key_name));
+                        byte[] buffer = new byte[1024];
+                        int read_len = 0;
+                        while ((read_len = s3ObjectInputStream.read(buffer)) > 0) {
+                            fileOutputStream.write(buffer, 0, read_len);
+                            
+                        }
+                        label.setText("Downloaded **" + key_name + "** successfully!");
+                        s3ObjectInputStream.close();
+                        fileOutputStream.close();
+                    } catch (AmazonServiceException ae) {
+                        System.err.println(ae.getErrorMessage());
+                        System.exit(1);
+                    } catch (FileNotFoundException ae) {
+                        System.err.println(ae.getMessage());
+                        System.exit(1);
+                    } catch (IOException ae) {
+                        System.err.println(ae.getMessage());
+                        System.exit(1);
+                    }
         	    }
         	  } 
         	} );
